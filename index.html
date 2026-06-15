@@ -30,7 +30,6 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <!-- ШАПКА ПРИЛОЖЕНИЯ -->
     <header class="bg-white border-b border-slate-200 shadow-sm py-4 px-6 sticky top-0 z-10">
         <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -56,7 +55,6 @@
         </div>
     </header>
 
-    <!-- ОСНОВНОЙ КОНТЕНТ -->
     <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-grow">
         
         <!-- ЭКРАН 1: НАСТРОЙКА И ВЫБОР РОЛИ (Показывается при первом входе) -->
@@ -117,7 +115,6 @@
         </section>
 
 
-        <!-- ЭКРАН 2: ПУЛЬТ МЕДСЕСТРЫ -->
         <section id="nurseScreen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Левая колонка: Управление вызовами -->
             <div class="lg:col-span-2 space-y-6">
@@ -220,7 +217,6 @@
         </section>
 
 
-        <!-- ЭКРАН 3: ТАБЛО В КОРИДОР (Отображение на большом экране) -->
         <section id="hallScreen" class="hidden max-w-4xl mx-auto space-y-8 py-4">
             <!-- Информационный баннер времени -->
             <div class="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-100 flex flex-col md:flex-row items-center justify-between gap-4">
@@ -258,7 +254,6 @@
         </section>
 
 
-        <!-- ЭКРАН 4: ТЕРМИНАЛ САМОЗАПИСИ (Планшет у двери) -->
         <section id="terminalScreen" class="hidden max-w-2xl mx-auto space-y-8 py-6">
             <div class="text-center">
                 <h2 class="text-3xl font-black text-slate-900 tracking-tight">ЭЛЕКТРОННАЯ ЗАПИСЬ</h2>
@@ -282,12 +277,12 @@
                         <div class="bg-teal-100 text-teal-600 p-4 rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-all">
                             <i class="fa-solid fa-vial text-2xl"></i>
                         </div>
-                        <div>
+                        <div class="terminal-btn-content">
                             <span class="text-xs font-bold text-teal-600 uppercase tracking-widest block mb-1">Время приема: 07:30 - 08:30</span>
-                            <h3 class="font-extrabold text-slate-950 text-xl">Общий анализ крови</h3>
+                            <h3 class="font-extrabold text-slate-950 text-xl btn-text">Общий анализ крови</h3>
                         </div>
                     </div>
-                    <div class="bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-teal-600 group-hover:text-white transition-all">
+                    <div class="arrow-container bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-teal-600 group-hover:text-white transition-all">
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </button>
@@ -298,12 +293,12 @@
                         <div class="bg-purple-100 text-purple-600 p-4 rounded-2xl group-hover:bg-purple-600 group-hover:text-white transition-all">
                             <i class="fa-solid fa-droplet text-2xl"></i>
                         </div>
-                        <div>
+                        <div class="terminal-btn-content">
                             <span class="text-xs font-bold text-purple-600 uppercase tracking-widest block mb-1">Время приема: 08:30 - 09:30</span>
-                            <h3 class="font-extrabold text-slate-950 text-xl">ВИЧ, Сахар, Биохимия</h3>
+                            <h3 class="font-extrabold text-slate-950 text-xl btn-text">ВИЧ, Сахар, Биохимия</h3>
                         </div>
                     </div>
-                    <div class="bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all">
+                    <div class="arrow-container bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all">
                         <i class="fa-solid fa-chevron-right"></i>
                     </div>
                 </button>
@@ -311,7 +306,6 @@
         </section>
 
 
-        <!-- ЭКРАН 5: МОБИЛЬНЫЙ ПАЦИЕНТ (Интерфейс, открывающийся по QR-коду) -->
         <section id="patientScreen" class="hidden max-w-sm mx-auto space-y-6 py-2">
             
             <!-- Если у пациента еще нет талона -->
@@ -333,17 +327,17 @@
                     <button onclick="registerPatient('general')" id="mobileBtnGeneral" class="w-full p-5 text-left rounded-2xl border border-teal-100 bg-white active:bg-teal-50 shadow-sm flex items-center justify-between gap-4">
                         <div>
                             <span class="text-[10px] font-bold text-teal-600 uppercase block mb-0.5">07:30 - 08:30</span>
-                            <h4 class="font-bold text-slate-900 text-sm">Общий анализ</h4>
+                            <h4 class="font-bold text-slate-900 text-sm mobile-btn-text">Общий анализ</h4>
                         </div>
-                        <div class="bg-teal-50 text-teal-600 p-2.5 rounded-xl"><i class="fa-solid fa-plus text-xs"></i></div>
+                        <div class="bg-teal-50 text-teal-600 p-2.5 rounded-xl mobile-arrow"><i class="fa-solid fa-plus text-xs"></i></div>
                     </button>
 
                     <button onclick="registerPatient('special')" id="mobileBtnSpecial" class="w-full p-5 text-left rounded-2xl border border-purple-100 bg-white active:bg-purple-50 shadow-sm flex items-center justify-between gap-4">
                         <div>
                             <span class="text-[10px] font-bold text-purple-600 uppercase block mb-0.5">08:30 - 09:30</span>
-                            <h4 class="font-bold text-slate-900 text-sm">ВИЧ, Сахар, Биохимия</h4>
+                            <h4 class="font-bold text-slate-900 text-sm mobile-btn-text">ВИЧ, Сахар, Биохимия</h4>
                         </div>
-                        <div class="bg-purple-50 text-purple-600 p-2.5 rounded-xl"><i class="fa-solid fa-plus text-xs"></i></div>
+                        <div class="bg-purple-50 text-purple-600 p-2.5 rounded-xl mobile-arrow"><i class="fa-solid fa-plus text-xs"></i></div>
                     </button>
                 </div>
             </div>
@@ -418,6 +412,13 @@
         let cabinetId = 'kabinet-305'; // Секретный топик облака
         let mqttClient = null;        // MQTT клиент
 
+        // --- Уникальный ID клиента для безопасных запросов ---
+        let myClientId = localStorage.getItem('my_client_id');
+        if (!myClientId) {
+            myClientId = 'pat_' + Math.random().toString(36).substring(2, 9);
+            localStorage.setItem('my_client_id', myClientId);
+        }
+
         // --- БАЗА ДАННЫХ ОЧЕРЕДИ (ВНУТРЕННЕЕ СОСТОЯНИЕ) ---
         let state = {
             activeCall: null,         // { number, category } - тот, кто вызван прямо сейчас
@@ -431,8 +432,9 @@
 
         // --- СОБСТВЕННЫЙ ТАЛОН НА ТЕЛЕФОНЕ ПАЦИЕНТА ---
         let mySavedTicket = null;     // Имя талона (строка), если пациент занял очередь
+        let registrationTimeout = null; // Таймаут для отслеживания зависших запросов
 
-        // --- ОПРЕДЕЛЯЕМ ПАРАМЕТРЫ ИЗ АДРЕСНОЙ СТРОКИ (Для автоподключения пациентов) ---
+        // --- ОПРЕДЕЛЯЕМ ПАРАМЕТРЫ ИЗ АДРЕСНОЙ СТРОКИ ---
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const urlCabinet = urlParams.get('cabinet');
@@ -455,19 +457,19 @@
             startClock();
         });
 
-        // Функция превращения русского текста кабинета в английский топик для облака
+        // Функция превращения русского текста кабинета в безопасный английский топик для облака
         function translateToTopic(text) {
-            return 'smart_ochered_' + text.replace(/[^A-Za-z0-9А-Яа-я]/g, '_').toLowerCase();
+            // Оставляем только безопасные символы, чтобы не сломать кодировку WebSockets на сервере
+            return 'smart_ochered_' + text.replace(/[^A-Za-z0-9]/g, '_').toLowerCase();
         }
 
-        // --- ИНИЦИАЛИЗАЦИЯ ПОДКЛЮЧЕНИЯ К ОБЛАКУ HIVEMQ ---
+        // --- STREAMING_CHUNK: Инициализация подключения к облаку EMQX/HiveMQ ---
         function initMQTT() {
             const statusDiv = document.getElementById('connectionStatus');
             const statusText = document.getElementById('connectionText');
 
-            // Решение ошибки 403 / SecurityError в Canvas:
-            // Используем стандартный защищенный WSS порт 443 для обхода междоменных ограничений.
-            const brokerUrl = 'wss://broker.hivemq.com:443/mqtt';
+            // Безопасный WSS порт 8884 на HiveMQ — стандарт защиты и стабильной доставки
+            const brokerUrl = 'wss://broker.hivemq.com:8884/mqtt';
             
             const options = {
                 clientId: 'client_' + Math.random().toString(16).substring(2, 10),
@@ -485,22 +487,31 @@
                 statusDiv.className = "flex items-center gap-2 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-full border border-emerald-200 font-medium";
                 statusText.innerText = "Облако активно";
                 
-                // Подписываемся на канал этого кабинета
+                // Подписываемся на канал состояния кабинета
                 mqttClient.subscribe(cabinetId + '/state', (err) => {
-                    if (!err) {
-                        // Посылаем запрос на получение актуального состояния у медсестры (если мы табло или пациент)
-                        if (currentRole !== 'nurse') {
-                            mqttClient.publish(cabinetId + '/request_sync', 'sync');
-                        }
+                    if (!err && currentRole !== 'nurse') {
+                        // Запрашиваем актуальный слепок очереди у медсестры
+                        mqttClient.publish(cabinetId + '/request_sync', 'sync');
                     }
                 });
+
+                // Подписываемся на персональные подтверждения (для пациентов и табло)
+                if (currentRole === 'patient' || currentRole === 'terminal') {
+                    mqttClient.subscribe(cabinetId + '/register_confirm/' + myClientId);
+                }
+
+                // Медсестра подписывается на запросы регистрации
+                if (currentRole === 'nurse') {
+                    mqttClient.subscribe(cabinetId + '/register_request');
+                    mqttClient.subscribe(cabinetId + '/request_sync');
+                }
             });
 
             mqttClient.on('message', (topic, message) => {
                 const payload = message.toString();
                 
+                // 1. Получение слепка состояния от медсестры
                 if (topic === cabinetId + '/state') {
-                    // Пришел новый слепок состояния из облака
                     try {
                         state = JSON.parse(payload);
                         updateUI();
@@ -508,9 +519,52 @@
                         console.error("Ошибка парсинга данных", e);
                     }
                 } 
+                // 2. Медсестра получила запрос на синхронизацию
                 else if (topic === cabinetId + '/request_sync' && currentRole === 'nurse') {
-                    // Кто-то подключился и просит синхронизацию
                     publishState();
+                }
+                // 3. Медсестра получила запрос на регистрацию нового талона
+                else if (topic === cabinetId + '/register_request' && currentRole === 'nurse') {
+                    try {
+                        const req = JSON.parse(payload);
+                        let ticketNumber = "";
+                        let catName = "";
+
+                        if (req.category === 'general') {
+                            state.generalCounter++;
+                            ticketNumber = "О-" + state.generalCounter;
+                            state.generalQueue.push(ticketNumber);
+                            catName = "Общий анализ крови";
+                        } else {
+                            state.specialCounter++;
+                            ticketNumber = "С-" + state.specialCounter;
+                            state.specialQueue.push(ticketNumber);
+                            catName = "ВИЧ, Сахар, Биохимия";
+                        }
+
+                        // Сохраняем и транслируем обновленную очередь всем устройствам
+                        publishState();
+
+                        // Отсылаем подтверждение именно на канал этого клиента
+                        mqttClient.publish(cabinetId + '/register_confirm/' + req.clientId, ticketNumber);
+                    } catch(e) {
+                        console.error("Ошибка обработки запроса регистрации", e);
+                    }
+                }
+                // 4. Пациент/Терминал получил личное подтверждение талона
+                else if (topic === cabinetId + '/register_confirm/' + myClientId && (currentRole === 'patient' || currentRole === 'terminal')) {
+                    clearTimeout(registrationTimeout);
+                    setRegisteringState(false);
+                    
+                    const ticketNumber = payload;
+                    
+                    if (currentRole === 'patient') {
+                        mySavedTicket = ticketNumber;
+                        localStorage.setItem('my_ticket_' + cabinetId, ticketNumber);
+                        updateUI();
+                    } else if (currentRole === 'terminal') {
+                        showSuccessNotification("Запись успешна!", "Ваш талон: " + ticketNumber + ". Пожалуйста, запомните его.");
+                    }
                 }
             });
 
@@ -526,7 +580,7 @@
             });
         }
 
-        // --- ВЫБОР РОЛИ УСТРОЙСТВА ---
+        // --- STREAMING_CHUNK: Выбор роли устройства ---
         function selectRole(role) {
             currentRole = role;
             
@@ -545,10 +599,9 @@
             // Показываем нужный экран
             if (role === 'nurse') {
                 document.getElementById('nurseScreen').classList.remove('hidden');
-                // Генерируем QR-код для этого кабинета
                 generateCabinetQRCode(cabInput);
                 
-                // Подгружаем сохраненную локально очередь (если медсестра обновила вкладку)
+                // Подгружаем сохраненную локально очередь у медсестры
                 const savedState = localStorage.getItem('nurse_state_' + cabinetId);
                 if (savedState) {
                     try { state = JSON.parse(savedState); } catch(e){}
@@ -564,14 +617,8 @@
             // Запускаем подключение к облаку
             initMQTT();
             
-            // Если мы медсестра, сразу отправляем состояние, либо сохраняем его локально
             if (role === 'nurse') {
                 publishState();
-            }
-
-            // Дополнительная подписка на запросы синхронизации
-            if (role === 'nurse') {
-                mqttClient.subscribe(cabinetId + '/request_sync');
             }
         }
 
@@ -580,14 +627,13 @@
             if (mqttClient && mqttClient.connected) {
                 mqttClient.publish(cabinetId + '/state', JSON.stringify(state), { retain: true });
             }
-            // Сохраняем локально на случай перезагрузки
             if (currentRole === 'nurse') {
                 localStorage.setItem('nurse_state_' + cabinetId, JSON.stringify(state));
             }
             updateUI();
         }
 
-        // --- ОБНОВЛЕНИЕ ИНТЕРФЕЙСА (ОДНО ДЛЯ ВСЕХ РОЛЕЙ) ---
+        // --- STREAMING_CHUNK: Обновление интерфейса UI ---
         function updateUI() {
             const hasActiveCall = state.activeCall !== null;
 
@@ -623,12 +669,10 @@
                 hallActive.innerText = hasActiveCall ? state.activeCall.number : 'ЖДИТЕ';
                 document.getElementById('hallActiveCategory').innerText = hasActiveCall ? state.activeCall.category : 'Идёт приём пациентов';
 
-                // Озвучка при смене номера
                 if (hasActiveCall && prevActive !== state.activeCall.number) {
                     speakCall(state.activeCall.number, document.getElementById('cabinetNameText').innerText);
                 }
 
-                // Обновление истории вызовов
                 const histCont = document.getElementById('hallHistoryContainer');
                 histCont.innerHTML = '';
                 for (let i = 0; i < 4; i++) {
@@ -708,32 +752,69 @@
             }
         }
 
-        // --- ДОБАВЛЕНИЕ НОВОГО ПАЦИЕНТА В ОЧЕРЕДЬ ---
+        // --- STREAMING_CHUNK: Логика регистрации талона через запрос в облако ---
         function registerPatient(category) {
             if (state.isBlocked) return;
-
-            let ticketNumber = "";
-
-            if (category === 'general') {
-                state.generalCounter++;
-                ticketNumber = "О-" + state.generalCounter;
-                state.generalQueue.push(ticketNumber);
-            } else {
-                state.specialCounter++;
-                ticketNumber = "С-" + state.specialCounter;
-                state.specialQueue.push(ticketNumber);
+            
+            if (!mqttClient || !mqttClient.connected) {
+                showSuccessNotification("Ошибка связи", "Нет подключения к облаку. Подождите секунду...");
+                return;
             }
 
-            if (currentRole === 'patient') {
-                mySavedTicket = ticketNumber;
-                localStorage.setItem('my_ticket_' + cabinetId, ticketNumber);
-            }
+            // Показываем индикатор загрузки
+            setRegisteringState(true);
 
-            publishState();
+            // Создаем безопасный объект запроса
+            const requestPayload = {
+                category: category,
+                clientId: myClientId
+            };
 
-            if (currentRole === 'terminal') {
-                showSuccessNotification("Запись успешна!", "Ваш талон: " + ticketNumber + ". Пожалуйста, запомните его.");
-            }
+            // Публикуем запрос на регистрацию
+            mqttClient.publish(cabinetId + '/register_request', JSON.stringify(requestPayload));
+
+            // Запускаем таймаут на 5 секунд на случай, если ноутбук медсестры закрыт
+            clearTimeout(registrationTimeout);
+            registrationTimeout = setTimeout(() => {
+                setRegisteringState(false);
+                showSuccessNotification("Кабинет молчит", "Пульт медсестры в кабинете неактивен. Пожалуйста, попросите медсестру войти в систему.");
+            }, 6000);
+        }
+
+        // Включение/выключение режима ожидания на кнопках
+        function setRegisteringState(isRegistering) {
+            const btns = [
+                document.getElementById('terminalBtnGeneral'),
+                document.getElementById('terminalBtnSpecial'),
+                document.getElementById('mobileBtnGeneral'),
+                document.getElementById('mobileBtnSpecial')
+            ];
+
+            btns.forEach(btn => {
+                if (btn) {
+                    btn.disabled = isRegistering;
+                    const textEl = btn.querySelector('.btn-text') || btn.querySelector('.mobile-btn-text');
+                    const arrowEl = btn.querySelector('.arrow-container') || btn.querySelector('.mobile-arrow');
+                    
+                    if (isRegistering) {
+                        btn.classList.add('opacity-60');
+                        if (textEl && !textEl.dataset.original) {
+                            textEl.dataset.original = textEl.innerText;
+                            textEl.innerText = "Получение талона...";
+                        }
+                        if (arrowEl) arrowEl.innerHTML = '<i class="fa-solid fa-circle-notch animate-spin"></i>';
+                    } else {
+                        btn.classList.remove('opacity-60');
+                        if (textEl && textEl.dataset.original) {
+                            textEl.innerText = textEl.dataset.original;
+                            delete textEl.dataset.original;
+                        }
+                        if (arrowEl) {
+                            arrowEl.innerHTML = currentRole === 'terminal' ? '<i class="fa-solid fa-chevron-right"></i>' : '<i class="fa-solid fa-plus text-xs"></i>';
+                        }
+                    }
+                }
+            });
         }
 
         // --- ВЫЗОВ СЛЕДУЮЩЕГО ПАЦИЕНТА МЕДСЕСТРОЙ ---
@@ -786,7 +867,7 @@
             publishState();
         }
 
-        // --- ОТМЕНА ТАЛОНА ПАЦИЕНТОМ НА СВОЕМ ТЕЛЕФОНЕ ---
+        // --- STREAMING_CHUNK: Дополнительные команды управления ---
         function cancelMyTicket() {
             if (!mySavedTicket) return;
 
@@ -799,7 +880,6 @@
             publishState();
         }
 
-        // --- ПЕРЕНОС ТЕКУЩЕГО ВЫЗВАННОГО В КОНЕЦ ОЧЕРЕДИ ---
         function delayCurrentPatient() {
             if (currentRole !== 'nurse' || !state.activeCall) return;
 
@@ -817,20 +897,17 @@
             showSuccessNotification("Перенос выполнен", "Пациент " + currentNum + " возвращен в конец очереди.");
         }
 
-        // --- ПОВТОРНЫЙ ВЫЗОВ ---
         function repeatCurrentCall() {
             if (currentRole !== 'nurse' || !state.activeCall) return;
             publishState();
         }
 
-        // --- ПРИОСТАНОВКА / ОТКРЫТИЕ ЗАПИСИ МЕДСЕСТРОЙ ---
         function toggleRegistration() {
             if (currentRole !== 'nurse') return;
             state.isBlocked = !state.isBlocked;
             publishState();
         }
 
-        // --- СБРОС И ОБНУЛЕНИЕ ВСЕЙ ОЧЕРЕДИ ---
         function openClearConfirmModal() {
             document.getElementById('confirmModal').classList.remove('hidden');
         }
@@ -853,7 +930,7 @@
             showSuccessNotification("Обнуление", "Все очереди успешно удалены.");
         }
 
-        // --- ГОЛОСОВАЯ ОЗВУЧКА ВЫЗОВА (Синтез речи) ---
+        // --- STREAMING_CHUNK: Голосовые функции и таймеры ---
         function speakCall(number, cabinet) {
             if ('speechSynthesis' in window) {
                 let humanNumber = number;
@@ -880,7 +957,6 @@
             }
         }
 
-        // --- АВТОМАТИЧЕСКАЯ ПОДСВЕТКА ВРЕМЕНИ ---
         function startClock() {
             setInterval(() => {
                 const now = new Date();
@@ -915,7 +991,6 @@
             }, 10000);
         }
 
-        // --- ГЕНЕРАТОР QR-КОДА НА ПУЛЬТЕ ---
         function generateCabinetQRCode(cabinetName) {
             const currentUrlWithoutParams = window.location.origin + window.location.pathname;
             const fullTargetUrl = `${currentUrlWithoutParams}?cabinet=${encodeURIComponent(cabinetName)}`;
@@ -933,7 +1008,6 @@
             });
         }
 
-        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА ---
         function copyCabinetLink() {
             const cabName = document.getElementById('cabinetNameText').innerText;
             const link = `${window.location.origin}${window.location.pathname}?cabinet=${encodeURIComponent(cabName)}`;
