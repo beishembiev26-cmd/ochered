@@ -38,7 +38,7 @@
                 </div>
                 <div>
                     <h1 class="font-extrabold text-xl tracking-tight text-slate-900">Умная Очередь</h1>
-                    <p class="text-xs text-slate-500 font-medium">Система управления потоком пациентов без затрат</p>
+                    <p class="text-xs text-slate-500 font-medium">Система управления потоком пациентов для города Балыкчы</p>
                 </div>
             </div>
             
@@ -114,23 +114,34 @@
             </div>
         </section>
 
-
+        <!-- ЭКРАН 2: ПУЛЬТ МЕДСЕСТРЫ -->
         <section id="nurseScreen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Левая колонка: Управление вызовами -->
             <div class="lg:col-span-2 space-y-6">
                 
-                <!-- Панель "Приостановки" записи -->
-                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex items-center justify-between gap-4">
-                    <div>
-                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
-                            <i class="fa-solid fa-toggle-on text-emerald-500" id="statusIcon"></i>
-                            Запись пациентов на телефонах
-                        </h3>
-                        <p class="text-xs text-slate-500 mt-0.5">Вы можете закрыть или открыть запись в любой момент времени.</p>
+                <!-- Статистика и очереди по категориям -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Общий анализ -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-3 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded-full uppercase">Общий анализ</span>
+                            <span class="text-xs text-slate-400">07:30 - 08:30</span>
+                        </div>
+                        <p class="text-sm text-slate-500">В очереди:</p>
+                        <p class="text-3xl font-bold text-slate-800" id="nurseCountGeneral">0 чел.</p>
+                        <p class="text-xs text-slate-400 mt-1" id="nurseGeneralList">Талоны отсутствуют</p>
                     </div>
-                    <button id="toggleRegistrationBtn" onclick="toggleRegistration()" class="px-5 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 active:scale-95 transition-all shadow-md shadow-red-100 text-sm whitespace-nowrap">
-                        <i class="fa-solid fa-ban mr-1.5"></i> Приостановить запись
-                    </button>
+
+                    <!-- ВИЧ, Сахар и т.д -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full uppercase">ВИЧ, Сахар, Биохимия</span>
+                            <span class="text-xs text-slate-400">08:30 - 09:30</span>
+                        </div>
+                        <p class="text-sm text-slate-500">В очереди:</p>
+                        <p class="text-3xl font-bold text-slate-800" id="nurseCountSpecial">0 чел.</p>
+                        <p class="text-xs text-slate-400 mt-1" id="nurseSpecialList">Талоны отсутствуют</p>
+                    </div>
                 </div>
 
                 <!-- Главная панель вызова -->
@@ -157,29 +168,18 @@
                     </button>
                 </div>
 
-                <!-- Статистика и очереди по категориям -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Общий анализ -->
-                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="px-3 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded-full uppercase">Общий анализ</span>
-                            <span class="text-xs text-slate-400">07:30 - 08:30</span>
-                        </div>
-                        <p class="text-sm text-slate-500">В очереди:</p>
-                        <p class="text-3xl font-bold text-slate-800" id="nurseCountGeneral">0 чел.</p>
-                        <p class="text-xs text-slate-400 mt-1" id="nurseGeneralList">Талоны отсутствуют</p>
+                <!-- Панель "Приостановки" записи -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-toggle-on text-emerald-500" id="statusIcon"></i>
+                            Запись пациентов на телефонах
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Вы можете закрыть или открыть запись в любой момент времени.</p>
                     </div>
-
-                    <!-- ВИЧ, Сахар и т.д -->
-                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-center mb-4">
-                            <span class="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full uppercase">ВИЧ, Сахар, Биохимия</span>
-                            <span class="text-xs text-slate-400">08:30 - 09:30</span>
-                        </div>
-                        <p class="text-sm text-slate-500">В очереди:</p>
-                        <p class="text-3xl font-bold text-slate-800" id="nurseCountSpecial">0 чел.</p>
-                        <p class="text-xs text-slate-400 mt-1" id="nurseSpecialList">Талоны отсутствуют</p>
-                    </div>
+                    <button id="toggleRegistrationBtn" onclick="toggleRegistration()" class="px-5 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 active:scale-95 transition-all shadow-md shadow-red-100 text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-ban mr-1.5"></i> Приостановить запись
+                    </button>
                 </div>
 
                 <!-- Кнопка полной очистки очереди -->
@@ -402,7 +402,7 @@
     <!-- ПОДВАЛ -->
     <footer class="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-center text-xs text-slate-400">
         <div class="max-w-6xl mx-auto">
-            &copy; 2026 Бесплатная электронная очередь в поликлинику. Разработано с заботой о людях.
+            &copy; 2026 Электронная очередь в поликлинику. Разработано с заботой о людях. Разработчик ОсОО "Трак Стоп" Элдияр Бейшембиев 0700 322 333
         </div>
     </footer>
 
