@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Умная очередь в кабинет</title>
+    <!-- Подключаем Tailwind CSS для красивого современного дизайна -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Библиотека для работы с облаком в реальном времени (MQTT через WebSockets с поддержкой SSL) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.3.7/mqtt.min.js"></script>
+    <!-- Библиотека для мгновенной генерации QR-кодов прямо в браузере -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Иконки для интерфейса -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Анимация пульсации для активного вызова */
+        @keyframes pulse-custom {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.03); opacity: 0.95; }
+        }
+        .pulse-active {
+            animation: pulse-custom 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- ШАПКА ПРИЛОЖЕНИЯ -->
+    <header class="bg-white border-b border-slate-200 shadow-sm py-4 px-6 sticky top-0 z-10">
+        <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-md shadow-blue-200">
+                    <i class="fa-solid fa-hospital-user text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-xl tracking-tight text-slate-900">Умная Очередь</h1>
+                    <p class="text-xs text-slate-500 font-medium">Система управления потоком пациентов без затрат</p>
+                </div>
+            </div>
+            
+            <!-- Индикатор сети и статус кабинета -->
+            <div class="flex items-center gap-3 text-sm">
+                <div id="connectionStatus" class="flex items-center gap-2 bg-amber-50 text-amber-800 px-3 py-1.5 rounded-full border border-amber-200 font-medium transition-all duration-300">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span id="connectionText">Подключение...</span>
+                </div>
+                <div id="cabinetDisplay" class="hidden bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-semibold border border-slate-200">
+                    <i class="fa-solid fa-door-open mr-1 text-slate-500"></i> <span id="cabinetNameText">-</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ОСНОВНОЙ КОНТЕНТ -->
+    <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-grow">
+        
+        <!-- ЭКРАН 1: НАСТРОЙКА И ВЫБОР РОЛИ (Показывается при первом входе) -->
+        <section id="roleSelectionScreen" class="max-w-md mx-auto bg-white rounded-3xl p-8 border border-slate-200 shadow-xl shadow-slate-100 mt-6">
+            <h2 class="text-2xl font-bold text-slate-900 mb-2 text-center">Добро пожаловать!</h2>
+            <p class="text-slate-500 text-sm text-center mb-6">Введите номер вашего кабинета и выберите, как использовать это устройство.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-2">Кабинет (например: 105, Кабинет 3):</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                            <i class="fa-solid fa-door-closed"></i>
+                        </span>
+                        <input type="text" id="cabinetInput" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-semibold" placeholder="Номер или название" value="Кабинет 305">
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-600 mb-3">Выберите режим работы:</p>
+                    
+                    <div class="space-y-3">
+                        <!-- Роль 1: Пульт Медсестры -->
+                        <button onclick="selectRole('nurse')" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-blue-500 hover:bg-blue-50/30 transition-all flex items-start gap-4 group">
+                            <div class="bg-blue-100 text-blue-600 p-3 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                <i class="fa-solid fa-user-doctor text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Пульт Медсестры</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Для вызова пациентов из кабинета, управления записью и печати QR-кода.</p>
+                            </div>
+                        </button>
+
+                        <!-- Роль 2: Табло в коридор -->
+                        <button onclick="selectRole('hall')" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/30 transition-all flex items-start gap-4 group">
+                            <div class="bg-indigo-100 text-indigo-600 p-3 rounded-lg group-hover:bg-indigo-600 group-hover:text-white transition-all">
+                                <i class="fa-solid fa-desktop text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Табло в коридор</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Для отображения текущих номеров и голосового озвучивания вызовов.</p>
+                            </div>
+                        </button>
+
+                        <!-- Роль 3: Терминал самозаписи (Физический планшет у двери) -->
+                        <button onclick="selectRole('terminal')" class="w-full text-left p-4 rounded-xl border-2 border-slate-200 hover:border-emerald-500 hover:bg-emerald-50/30 transition-all flex items-start gap-4 group">
+                            <div class="bg-emerald-100 text-emerald-600 p-3 rounded-lg group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                                <i class="fa-solid fa-ticket text-lg"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-900">Терминал самозаписи</h3>
+                                <p class="text-xs text-slate-500 mt-0.5">Планшет у двери, где люди нажимают физические кнопки для получения талона.</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ЭКРАН 2: ПУЛЬТ МЕДСЕСТРЫ -->
+        <section id="nurseScreen" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Левая колонка: Управление вызовами -->
+            <div class="lg:col-span-2 space-y-6">
+                
+                <!-- Панель "Приостановки" записи -->
+                <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md flex items-center justify-between gap-4">
+                    <div>
+                        <h3 class="font-bold text-slate-900 flex items-center gap-2">
+                            <i class="fa-solid fa-toggle-on text-emerald-500" id="statusIcon"></i>
+                            Запись пациентов на телефонах
+                        </h3>
+                        <p class="text-xs text-slate-500 mt-0.5">Вы можете закрыть или открыть запись в любой момент времени.</p>
+                    </div>
+                    <button id="toggleRegistrationBtn" onclick="toggleRegistration()" class="px-5 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 active:scale-95 transition-all shadow-md shadow-red-100 text-sm whitespace-nowrap">
+                        <i class="fa-solid fa-ban mr-1.5"></i> Приостановить запись
+                    </button>
+                </div>
+
+                <!-- Главная панель вызова -->
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-md">
+                    <p class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Вызывается сейчас</p>
+                    <div class="flex items-center justify-between gap-4 mb-8">
+                        <div>
+                            <span id="nurseActiveNumber" class="text-6xl sm:text-7xl font-black text-blue-600 tracking-tight">- -</span>
+                            <p id="nurseActiveCategory" class="text-sm font-semibold text-slate-500 mt-2">Никого не вызвано</p>
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="repeatCurrentCall()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-volume-high"></i> Повторить звук
+                            </button>
+                            <button onclick="delayCurrentPatient()" class="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left"></i> В конец очереди
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Огромная кнопка вызова -->
+                    <button onclick="callNextPatient()" class="w-full bg-blue-600 text-white hover:bg-blue-700 active:scale-98 p-6 rounded-2xl font-black text-xl tracking-wide shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-3">
+                        <i class="fa-solid fa-forward-step text-2xl"></i> ВЫЗВАТЬ СЛЕДУЮЩЕГО
+                    </button>
+                </div>
+
+                <!-- Статистика и очереди по категориям -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Общий анализ -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-3 py-1 bg-teal-100 text-teal-800 text-xs font-bold rounded-full uppercase">Общий анализ</span>
+                            <span class="text-xs text-slate-400">07:30 - 08:30</span>
+                        </div>
+                        <p class="text-sm text-slate-500">В очереди:</p>
+                        <p class="text-3xl font-bold text-slate-800" id="nurseCountGeneral">0 чел.</p>
+                        <p class="text-xs text-slate-400 mt-1" id="nurseGeneralList">Талоны отсутствуют</p>
+                    </div>
+
+                    <!-- ВИЧ, Сахар и т.д -->
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-bold rounded-full uppercase">ВИЧ, Сахар, Биохимия</span>
+                            <span class="text-xs text-slate-400">08:30 - 09:30</span>
+                        </div>
+                        <p class="text-sm text-slate-500">В очереди:</p>
+                        <p class="text-3xl font-bold text-slate-800" id="nurseCountSpecial">0 чел.</p>
+                        <p class="text-xs text-slate-400 mt-1" id="nurseSpecialList">Талоны отсутствуют</p>
+                    </div>
+                </div>
+
+                <!-- Кнопка полной очистки очереди -->
+                <div class="pt-4 flex justify-end">
+                    <button onclick="openClearConfirmModal()" class="text-xs text-red-500 hover:text-red-700 font-semibold flex items-center gap-1.5 transition-all">
+                        <i class="fa-solid fa-trash-can"></i> Сбросить и обнулить всю очередь
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Правая колонка: Распечатка QR-кода -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-md h-fit flex flex-col items-center text-center">
+                <div class="bg-blue-50 text-blue-600 p-3 rounded-2xl mb-4">
+                    <i class="fa-solid fa-qrcode text-3xl"></i>
+                </div>
+                <h3 class="font-extrabold text-slate-900 text-lg">QR-код вашего кабинета</h3>
+                <p class="text-xs text-slate-500 mt-1 mb-6 px-4">Распечатайте его на обычном принтере и наклейте на дверь. Люди отсканируют его и запишутся со своего телефона.</p>
+                
+                <!-- Сюда сгенерируется QR-код -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-inner mb-6" id="qrcodeContainer">
+                    <div id="qrcode"></div>
+                </div>
+
+                <div class="w-full space-y-2">
+                    <button onclick="window.print()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-print"></i> Распечатать плакат
+                    </button>
+                    <!-- Ссылка, которую можно также отправить в мессенджере -->
+                    <button onclick="copyCabinetLink()" class="w-full text-slate-600 hover:text-slate-800 hover:bg-slate-50 font-semibold py-2 px-4 rounded-xl text-xs transition-all">
+                        <i class="fa-solid fa-copy mr-1"></i> Скопировать ссылку на этот кабинет
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ЭКРАН 3: ТАБЛО В КОРИДОР (Отображение на большом экране) -->
+        <section id="hallScreen" class="hidden max-w-4xl mx-auto space-y-8 py-4">
+            <!-- Информационный баннер времени -->
+            <div class="bg-blue-600 text-white rounded-3xl p-6 shadow-lg shadow-blue-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                <div class="text-center md:text-left">
+                    <h3 class="font-black text-xl tracking-wide">ВНИМАНИЕ ОЧЕРЕДЬ!</h3>
+                    <p class="text-sm text-blue-100 mt-1">Пожалуйста, подготовьте документы и проходите сразу, как только прозвучит ваш номер.</p>
+                </div>
+                <div class="bg-white/10 px-4 py-2 rounded-xl text-sm font-bold border border-white/20 whitespace-nowrap text-center">
+                    <span id="hallTimePrompt">Анализы по расписанию</span>
+                </div>
+            </div>
+
+            <!-- Главное гигантское табло вызова -->
+            <div class="bg-white rounded-[40px] border-4 border-blue-600 p-12 text-center shadow-2xl shadow-slate-100 relative overflow-hidden pulse-active">
+                <div class="absolute top-0 inset-x-0 h-2 bg-blue-600"></div>
+                
+                <p class="text-sm font-extrabold uppercase tracking-widest text-slate-400 mb-4">ПРОХОДИТЕ В КАБИНЕТ</p>
+                <span id="hallActiveNumber" class="text-8xl sm:text-9xl font-black text-slate-900 tracking-tighter">ЖДИТЕ</span>
+                
+                <div class="mt-8 pt-8 border-t border-slate-100">
+                    <p class="text-lg font-bold text-blue-600 uppercase tracking-wider" id="hallActiveCategory">Идёт приём пациентов</p>
+                </div>
+            </div>
+
+            <!-- Последние прошедшие номера для истории -->
+            <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm">
+                <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-6 text-center">Предыдущие пациенты:</h3>
+                <div class="grid grid-cols-4 gap-4 text-center" id="hallHistoryContainer">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="text-xl font-bold text-slate-400">-</span></div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="text-xl font-bold text-slate-400">-</span></div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="text-xl font-bold text-slate-400">-</span></div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="text-xl font-bold text-slate-400">-</span></div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ЭКРАН 4: ТЕРМИНАЛ САМОЗАПИСИ (Планшет у двери) -->
+        <section id="terminalScreen" class="hidden max-w-2xl mx-auto space-y-8 py-6">
+            <div class="text-center">
+                <h2 class="text-3xl font-black text-slate-900 tracking-tight">ЭЛЕКТРОННАЯ ЗАПИСЬ</h2>
+                <p class="text-slate-500 text-sm mt-1">Пожалуйста, выберите необходимый анализ для записи</p>
+            </div>
+
+            <!-- Баннер приостановки (Показывается по воле медсестры) -->
+            <div id="terminalBlockedBanner" class="hidden bg-amber-50 rounded-3xl p-8 border border-amber-200 text-center shadow-lg shadow-amber-50">
+                <div class="text-amber-500 text-4xl mb-3">
+                    <i class="fa-solid fa-circle-exclamation"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-amber-950">Запись временно приостановлена</h3>
+                <p class="text-slate-600 text-sm mt-2 max-w-md mx-auto">Медсестра временно остановила выдачу талонов, чтобы принять всех находящихся в коридоре людей. Пожалуйста, обратитесь к медсестре.</p>
+            </div>
+
+            <!-- Кнопки записи (для планшета) -->
+            <div class="grid grid-cols-1 gap-5" id="terminalButtonsContainer">
+                <!-- Категория 1 -->
+                <button onclick="registerPatient('general')" id="terminalBtnGeneral" class="p-8 text-left rounded-3xl border-2 border-teal-200 hover:border-teal-500 bg-white hover:bg-teal-50/20 shadow-md hover:shadow-xl transition-all flex items-center justify-between gap-6 group">
+                    <div class="flex items-center gap-5">
+                        <div class="bg-teal-100 text-teal-600 p-4 rounded-2xl group-hover:bg-teal-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-vial text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-teal-600 uppercase tracking-widest block mb-1">Время приема: 07:30 - 08:30</span>
+                            <h3 class="font-extrabold text-slate-950 text-xl">Общий анализ крови</h3>
+                        </div>
+                    </div>
+                    <div class="bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-teal-600 group-hover:text-white transition-all">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </button>
+
+                <!-- Категория 2 -->
+                <button onclick="registerPatient('special')" id="terminalBtnSpecial" class="p-8 text-left rounded-3xl border-2 border-purple-200 hover:border-purple-500 bg-white hover:bg-purple-50/20 shadow-md hover:shadow-xl transition-all flex items-center justify-between gap-6 group">
+                    <div class="flex items-center gap-5">
+                        <div class="bg-purple-100 text-purple-600 p-4 rounded-2xl group-hover:bg-purple-600 group-hover:text-white transition-all">
+                            <i class="fa-solid fa-droplet text-2xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xs font-bold text-purple-600 uppercase tracking-widest block mb-1">Время приема: 08:30 - 09:30</span>
+                            <h3 class="font-extrabold text-slate-950 text-xl">ВИЧ, Сахар, Биохимия</h3>
+                        </div>
+                    </div>
+                    <div class="bg-slate-100 text-slate-600 p-2.5 rounded-full group-hover:bg-purple-600 group-hover:text-white transition-all">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+
+        <!-- ЭКРАН 5: МОБИЛЬНЫЙ ПАЦИЕНТ (Интерфейс, открывающийся по QR-коду) -->
+        <section id="patientScreen" class="hidden max-w-sm mx-auto space-y-6 py-2">
+            
+            <!-- Если у пациента еще нет талона -->
+            <div id="patientNoTicketState" class="space-y-6">
+                <div class="text-center">
+                    <h2 class="text-2xl font-black text-slate-900 tracking-tight">Электронная запись</h2>
+                    <p class="text-slate-500 text-xs mt-1">Кабинет: <span class="font-bold text-slate-700" id="patientCabinetLabel">-</span></p>
+                </div>
+
+                <!-- Сообщение о блокировке на мобильном -->
+                <div id="patientBlockedBanner" class="hidden bg-amber-50 rounded-2xl p-6 border border-amber-200 text-center">
+                    <span class="text-amber-500 text-3xl block mb-2">⚠️</span>
+                    <h4 class="font-bold text-amber-950 text-sm">Прием талонов ограничен</h4>
+                    <p class="text-slate-600 text-xs mt-1">Медсестра приостановила выдачу новых талонов, чтобы завершить текущую очередь.</p>
+                </div>
+
+                <!-- Кнопки записи на мобильном -->
+                <div class="space-y-3" id="patientActiveButtons">
+                    <button onclick="registerPatient('general')" id="mobileBtnGeneral" class="w-full p-5 text-left rounded-2xl border border-teal-100 bg-white active:bg-teal-50 shadow-sm flex items-center justify-between gap-4">
+                        <div>
+                            <span class="text-[10px] font-bold text-teal-600 uppercase block mb-0.5">07:30 - 08:30</span>
+                            <h4 class="font-bold text-slate-900 text-sm">Общий анализ</h4>
+                        </div>
+                        <div class="bg-teal-50 text-teal-600 p-2.5 rounded-xl"><i class="fa-solid fa-plus text-xs"></i></div>
+                    </button>
+
+                    <button onclick="registerPatient('special')" id="mobileBtnSpecial" class="w-full p-5 text-left rounded-2xl border border-purple-100 bg-white active:bg-purple-50 shadow-sm flex items-center justify-between gap-4">
+                        <div>
+                            <span class="text-[10px] font-bold text-purple-600 uppercase block mb-0.5">08:30 - 09:30</span>
+                            <h4 class="font-bold text-slate-900 text-sm">ВИЧ, Сахар, Биохимия</h4>
+                        </div>
+                        <div class="bg-purple-50 text-purple-600 p-2.5 rounded-xl"><i class="fa-solid fa-plus text-xs"></i></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Если у пациента УЖЕ ЕСТЬ талон -->
+            <div id="patientActiveTicketState" class="hidden space-y-6">
+                <!-- Талон -->
+                <div class="bg-white rounded-3xl border border-slate-200 p-8 text-center shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 inset-x-0 h-1.5 bg-blue-500"></div>
+                    <span class="px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-bold rounded-full uppercase tracking-wider inline-block mb-3">Ваш виртуальный талон</span>
+                    
+                    <h2 class="text-6xl font-black text-slate-950 tracking-tight block mb-1" id="patientMyTicketNumber">О-00</h2>
+                    <p class="text-xs font-semibold text-slate-500" id="patientMyCategory">Категория анализа</p>
+                    
+                    <div class="mt-6 pt-6 border-t border-slate-100 space-y-3">
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Сейчас в кабинете:</span>
+                            <span class="font-bold text-slate-900" id="patientCurrentActiveNum">-</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500">
+                            <span>Осталось перед вами:</span>
+                            <span class="font-bold text-slate-900" id="patientWaitingCount">Ожидайте...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Совет уйти от толпы -->
+                <div class="bg-blue-50/50 rounded-2xl p-4 border border-blue-100 text-center">
+                    <p class="text-[11px] text-blue-800 leading-relaxed font-medium">
+                        <i class="fa-solid fa-mug-hot mr-1 text-blue-500"></i> Вы можете отойти от двери! Очередь обновляется автоматически онлайн. Следите за экраном телефона.
+                    </p>
+                </div>
+
+                <!-- Кнопка отмены -->
+                <button onclick="cancelMyTicket()" class="w-full text-center text-xs text-red-500 font-bold py-2 hover:bg-red-50 rounded-lg transition-all">
+                    Отказаться от очереди (удалить талон)
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ИНТЕРАКТИВНОЕ ОКНО ПОДТВЕРЖДЕНИЯ ДЛЯ СБРОСА ОЧЕРЕДИ (Замена системному confirm) -->
+    <div id="confirmModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 flex items-center justify-center p-4 backdrop-blur-xs transition-opacity duration-300">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 border border-slate-100 shadow-2xl scale-95 transition-transform duration-300">
+            <div class="text-red-600 text-4xl mb-3 text-center">
+                <i class="fa-solid fa-triangle-exclamation animate-bounce"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-950 text-center">Сбросить всю очередь?</h3>
+            <p class="text-slate-500 text-xs text-center mt-2 leading-relaxed">Это действие полностью сотрет все активные и завершенные талоны у вас, на табло и у всех пациентов на телефонах. Это нельзя будет отменить.</p>
+            <div class="mt-6 flex gap-2">
+                <button onclick="closeClearConfirmModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl text-xs transition-all">
+                    Отмена
+                </button>
+                <button onclick="resetWholeQueueConfirmed()" class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition-all shadow-md shadow-red-100">
+                    Да, стереть всё
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПОДВАЛ -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-6 mt-12 text-center text-xs text-slate-400">
+        <div class="max-w-6xl mx-auto">
+            &copy; 2026 Бесплатная электронная очередь в поликлинику. Разработано с заботой о людях.
+        </div>
+    </footer>
+
+    <script>
+        // --- ГЛОБАЛЬНЫЕ НАСТРОЙКИ СИСТЕМЫ ---
+        let currentRole = null;       // Текущая выбранная роль (nurse, hall, terminal, patient)
+        let cabinetId = 'kabinet-305'; // Секретный топик облака
+        let mqttClient = null;        // MQTT клиент
+
+        // --- БАЗА ДАННЫХ ОЧЕРЕДИ (ВНУТРЕННЕЕ СОСТОЯНИЕ) ---
+        let state = {
+            activeCall: null,         // { number, category } - тот, кто вызван прямо сейчас
+            generalQueue: [],         // Массив талонов на общий анализ (например, ["О-1", "О-2"])
+            specialQueue: [],         // Массив талонов на ВИЧ/Сахар (например, ["С-1", "С-2"])
+            generalCounter: 0,        // Счетчик талонов Общего анализа
+            specialCounter: 0,        // Счетчик талонов ВИЧ/Сахара
+            isBlocked: false,         // Приостановлена ли медсестрой регистрация
+            history: []               // Последние вызванные 4 талона
+        };
+
+        // --- СОБСТВЕННЫЙ ТАЛОН НА ТЕЛЕФОНЕ ПАЦИЕНТА ---
+        let mySavedTicket = null;     // Имя талона (строка), если пациент занял очередь
+
+        // --- ОПРЕДЕЛЯЕМ ПАРАМЕТРЫ ИЗ АДРЕСНОЙ СТРОКИ (Для автоподключения пациентов) ---
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlCabinet = urlParams.get('cabinet');
+            
+            if (urlCabinet) {
+                document.getElementById('cabinetInput').value = urlCabinet;
+                cabinetId = translateToTopic(urlCabinet);
+                
+                // Проверяем, был ли сохранен талон в этом кабинете ранее
+                const localTicket = localStorage.getItem('my_ticket_' + cabinetId);
+                if (localTicket) {
+                    mySavedTicket = localTicket;
+                }
+                
+                // Автоматически направляем человека на роль пациента
+                selectRole('patient');
+            }
+            
+            // Запускаем постоянный контроль времени
+            startClock();
+        });
+
+        // Функция превращения русского текста кабинета в английский топик для облака
+        function translateToTopic(text) {
+            return 'smart_ochered_' + text.replace(/[^A-Za-z0-9А-Яа-я]/g, '_').toLowerCase();
+        }
+
+        // --- ИНИЦИАЛИЗАЦИЯ ПОДКЛЮЧЕНИЯ К ОБЛАКУ HIVEMQ ---
+        function initMQTT() {
+            const statusDiv = document.getElementById('connectionStatus');
+            const statusText = document.getElementById('connectionText');
+
+            // Решение ошибки 403 / SecurityError в Canvas:
+            // Используем стандартный защищенный WSS порт 443 для обхода междоменных ограничений.
+            const brokerUrl = 'wss://broker.hivemq.com:443/mqtt';
+            
+            const options = {
+                clientId: 'client_' + Math.random().toString(16).substring(2, 10),
+                clean: true,
+                connectTimeout: 5000,
+                reconnectPeriod: 2000
+            };
+
+            statusDiv.className = "flex items-center gap-2 bg-amber-50 text-amber-800 px-3 py-1.5 rounded-full border border-amber-200 font-medium";
+            statusText.innerText = "Подключение...";
+
+            mqttClient = mqtt.connect(brokerUrl, options);
+
+            mqttClient.on('connect', () => {
+                statusDiv.className = "flex items-center gap-2 bg-emerald-50 text-emerald-800 px-3 py-1.5 rounded-full border border-emerald-200 font-medium";
+                statusText.innerText = "Облако активно";
+                
+                // Подписываемся на канал этого кабинета
+                mqttClient.subscribe(cabinetId + '/state', (err) => {
+                    if (!err) {
+                        // Посылаем запрос на получение актуального состояния у медсестры (если мы табло или пациент)
+                        if (currentRole !== 'nurse') {
+                            mqttClient.publish(cabinetId + '/request_sync', 'sync');
+                        }
+                    }
+                });
+            });
+
+            mqttClient.on('message', (topic, message) => {
+                const payload = message.toString();
+                
+                if (topic === cabinetId + '/state') {
+                    // Пришел новый слепок состояния из облака
+                    try {
+                        state = JSON.parse(payload);
+                        updateUI();
+                    } catch(e) {
+                        console.error("Ошибка парсинга данных", e);
+                    }
+                } 
+                else if (topic === cabinetId + '/request_sync' && currentRole === 'nurse') {
+                    // Кто-то подключился и просит синхронизацию
+                    publishState();
+                }
+            });
+
+            mqttClient.on('error', (err) => {
+                console.error("MQTT ошибка подключения", err);
+                statusDiv.className = "flex items-center gap-2 bg-red-50 text-red-800 px-3 py-1.5 rounded-full border border-red-200 font-medium";
+                statusText.innerText = "Сбой сети";
+            });
+
+            mqttClient.on('offline', () => {
+                statusDiv.className = "flex items-center gap-2 bg-slate-50 text-slate-500 px-3 py-1.5 rounded-full border border-slate-200 font-medium";
+                statusText.innerText = "Автономный режим";
+            });
+        }
+
+        // --- ВЫБОР РОЛИ УСТРОЙСТВА ---
+        function selectRole(role) {
+            currentRole = role;
+            
+            // Запоминаем имя кабинета
+            const cabInput = document.getElementById('cabinetInput').value.trim() || 'Кабинет 305';
+            cabinetId = translateToTopic(cabInput);
+
+            // Настраиваем видимость шапки
+            document.getElementById('cabinetDisplay').classList.remove('hidden');
+            document.getElementById('cabinetNameText').innerText = cabInput;
+            document.getElementById('patientCabinetLabel').innerText = cabInput;
+
+            // Скрываем стартовый экран выбора
+            document.getElementById('roleSelectionScreen').classList.add('hidden');
+
+            // Показываем нужный экран
+            if (role === 'nurse') {
+                document.getElementById('nurseScreen').classList.remove('hidden');
+                // Генерируем QR-код для этого кабинета
+                generateCabinetQRCode(cabInput);
+                
+                // Подгружаем сохраненную локально очередь (если медсестра обновила вкладку)
+                const savedState = localStorage.getItem('nurse_state_' + cabinetId);
+                if (savedState) {
+                    try { state = JSON.parse(savedState); } catch(e){}
+                }
+            } else if (role === 'hall') {
+                document.getElementById('hallScreen').classList.remove('hidden');
+            } else if (role === 'terminal') {
+                document.getElementById('terminalScreen').classList.remove('hidden');
+            } else if (role === 'patient') {
+                document.getElementById('patientScreen').classList.remove('hidden');
+            }
+
+            // Запускаем подключение к облаку
+            initMQTT();
+            
+            // Если мы медсестра, сразу отправляем состояние, либо сохраняем его локально
+            if (role === 'nurse') {
+                publishState();
+            }
+
+            // Дополнительная подписка на запросы синхронизации
+            if (role === 'nurse') {
+                mqttClient.subscribe(cabinetId + '/request_sync');
+            }
+        }
+
+        // --- ФУНКЦИЯ ПЕРЕДАЧИ СОСТОЯНИЯ В ОБЛАКО ---
+        function publishState() {
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish(cabinetId + '/state', JSON.stringify(state), { retain: true });
+            }
+            // Сохраняем локально на случай перезагрузки
+            if (currentRole === 'nurse') {
+                localStorage.setItem('nurse_state_' + cabinetId, JSON.stringify(state));
+            }
+            updateUI();
+        }
+
+        // --- ОБНОВЛЕНИЕ ИНТЕРФЕЙСА (ОДНО ДЛЯ ВСЕХ РОЛЕЙ) ---
+        function updateUI() {
+            const hasActiveCall = state.activeCall !== null;
+
+            // 1. Обновление Экрана Медсестры
+            if (currentRole === 'nurse') {
+                document.getElementById('nurseActiveNumber').innerText = hasActiveCall ? state.activeCall.number : '- -';
+                document.getElementById('nurseActiveCategory').innerText = hasActiveCall ? state.activeCall.category : 'Никого не вызвано';
+                
+                document.getElementById('nurseCountGeneral').innerText = state.generalQueue.length + ' чел.';
+                document.getElementById('nurseCountSpecial').innerText = state.specialQueue.length + ' чел.';
+                
+                document.getElementById('nurseGeneralList').innerText = state.generalQueue.length > 0 ? "В очереди: " + state.generalQueue.join(', ') : 'Очередь пуста';
+                document.getElementById('nurseSpecialList').innerText = state.specialQueue.length > 0 ? "В очереди: " + state.specialQueue.join(', ') : 'Очередь пуста';
+                
+                const toggleBtn = document.getElementById('toggleRegistrationBtn');
+                const statusIcon = document.getElementById('statusIcon');
+                if (state.isBlocked) {
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-play mr-1.5"></i> Открыть запись';
+                    toggleBtn.className = "px-5 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 active:scale-95 transition-all shadow-md shadow-emerald-100 text-sm whitespace-nowrap";
+                    statusIcon.className = "fa-solid fa-toggle-off text-slate-400";
+                } else {
+                    toggleBtn.innerHTML = '<i class="fa-solid fa-ban mr-1.5"></i> Приостановить запись';
+                    toggleBtn.className = "px-5 py-2.5 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 active:scale-95 transition-all shadow-md shadow-red-100 text-sm whitespace-nowrap";
+                    statusIcon.className = "fa-solid fa-toggle-on text-emerald-500";
+                }
+            }
+
+            // 2. Обновление Табло в Коридоре
+            if (currentRole === 'hall') {
+                const hallActive = document.getElementById('hallActiveNumber');
+                const prevActive = hallActive.innerText;
+
+                hallActive.innerText = hasActiveCall ? state.activeCall.number : 'ЖДИТЕ';
+                document.getElementById('hallActiveCategory').innerText = hasActiveCall ? state.activeCall.category : 'Идёт приём пациентов';
+
+                // Озвучка при смене номера
+                if (hasActiveCall && prevActive !== state.activeCall.number) {
+                    speakCall(state.activeCall.number, document.getElementById('cabinetNameText').innerText);
+                }
+
+                // Обновление истории вызовов
+                const histCont = document.getElementById('hallHistoryContainer');
+                histCont.innerHTML = '';
+                for (let i = 0; i < 4; i++) {
+                    const item = state.history[i];
+                    if (item) {
+                        histCont.innerHTML += `<div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100"><span class="text-xl font-bold text-blue-700">${item}</span></div>`;
+                    } else {
+                        histCont.innerHTML += `<div class="bg-slate-50 p-4 rounded-2xl border border-slate-100"><span class="text-xl font-bold text-slate-300">-</span></div>`;
+                    }
+                }
+            }
+
+            // 3. Обновление Физического Терминала у Двери
+            if (currentRole === 'terminal') {
+                const tBlocked = document.getElementById('terminalBlockedBanner');
+                const tButtons = document.getElementById('terminalButtonsContainer');
+                
+                if (state.isBlocked) {
+                    tBlocked.classList.remove('hidden');
+                    tButtons.classList.add('hidden');
+                } else {
+                    tBlocked.classList.add('hidden');
+                    tButtons.classList.remove('hidden');
+                }
+            }
+
+            // 4. Обновление Мобильного Пациента
+            if (currentRole === 'patient') {
+                const noTicketState = document.getElementById('patientNoTicketState');
+                const activeTicketState = document.getElementById('patientActiveTicketState');
+                const pBlocked = document.getElementById('patientBlockedBanner');
+                const pButtons = document.getElementById('patientActiveButtons');
+
+                if (mySavedTicket && state.activeCall && state.activeCall.number === mySavedTicket) {
+                    if (navigator.vibrate) { navigator.vibrate([200, 100, 200]); }
+                }
+
+                if (mySavedTicket) {
+                    noTicketState.classList.add('hidden');
+                    activeTicketState.classList.remove('hidden');
+
+                    document.getElementById('patientMyTicketNumber').innerText = mySavedTicket;
+                    
+                    const isGeneral = mySavedTicket.startsWith('О');
+                    document.getElementById('patientMyCategory').innerText = isGeneral ? 'Общий анализ крови' : 'ВИЧ, Сахар, Биохимия';
+                    document.getElementById('patientCurrentActiveNum').innerText = hasActiveCall ? state.activeCall.number : 'Ожидайте вызова';
+
+                    const ourQueue = isGeneral ? state.generalQueue : state.specialQueue;
+                    const positionInQueue = ourQueue.indexOf(mySavedTicket);
+
+                    if (positionInQueue !== -1) {
+                        document.getElementById('patientWaitingCount').innerText = positionInQueue + ' чел.';
+                    } else {
+                        if (state.activeCall && state.activeCall.number === mySavedTicket) {
+                            document.getElementById('patientWaitingCount').innerHTML = '<span class="text-emerald-600 font-extrabold animate-pulse">ВАШ ЧЕРЕД! ПРОХОДИТЕ!</span>';
+                        } else {
+                            document.getElementById('patientWaitingCount').innerText = 'Завершен или отменен';
+                            setTimeout(() => {
+                                if (mySavedTicket && !ourQueue.includes(mySavedTicket) && (!state.activeCall || state.activeCall.number !== mySavedTicket)) {
+                                    cancelMyTicket();
+                                }
+                            }, 5000);
+                        }
+                    }
+                } else {
+                    noTicketState.classList.remove('hidden');
+                    activeTicketState.classList.add('hidden');
+
+                    if (state.isBlocked) {
+                        pBlocked.classList.remove('hidden');
+                        pButtons.classList.add('hidden');
+                    } else {
+                        pBlocked.classList.add('hidden');
+                        pButtons.classList.remove('hidden');
+                    }
+                }
+            }
+        }
+
+        // --- ДОБАВЛЕНИЕ НОВОГО ПАЦИЕНТА В ОЧЕРЕДЬ ---
+        function registerPatient(category) {
+            if (state.isBlocked) return;
+
+            let ticketNumber = "";
+
+            if (category === 'general') {
+                state.generalCounter++;
+                ticketNumber = "О-" + state.generalCounter;
+                state.generalQueue.push(ticketNumber);
+            } else {
+                state.specialCounter++;
+                ticketNumber = "С-" + state.specialCounter;
+                state.specialQueue.push(ticketNumber);
+            }
+
+            if (currentRole === 'patient') {
+                mySavedTicket = ticketNumber;
+                localStorage.setItem('my_ticket_' + cabinetId, ticketNumber);
+            }
+
+            publishState();
+
+            if (currentRole === 'terminal') {
+                showSuccessNotification("Запись успешна!", "Ваш талон: " + ticketNumber + ". Пожалуйста, запомните его.");
+            }
+        }
+
+        // --- ВЫЗОВ СЛЕДУЮЩЕГО ПАЦИЕНТА МЕДСЕСТРОЙ ---
+        function callNextPatient() {
+            if (currentRole !== 'nurse') return;
+
+            let nextPatientNum = null;
+            let categoryName = "";
+
+            const now = new Date();
+            const hour = now.getHours();
+            const minutes = now.getMinutes();
+            const totalMinutes = hour * 60 + minutes;
+
+            const isGeneralTime = totalMinutes >= 450 && totalMinutes < 510; // 07:30 - 08:30
+
+            if (state.activeCall) {
+                state.history.unshift(state.activeCall.number);
+                if (state.history.length > 4) state.history.pop();
+            }
+
+            if (isGeneralTime) {
+                if (state.generalQueue.length > 0) {
+                    nextPatientNum = state.generalQueue.shift();
+                    categoryName = "Общий анализ крови";
+                } else if (state.specialQueue.length > 0) {
+                    nextPatientNum = state.specialQueue.shift();
+                    categoryName = "ВИЧ, Сахар, Биохимия";
+                }
+            } else {
+                if (state.specialQueue.length > 0) {
+                    nextPatientNum = state.specialQueue.shift();
+                    categoryName = "ВИЧ, Сахар, Биохимия";
+                } else if (state.generalQueue.length > 0) {
+                    nextPatientNum = state.generalQueue.shift();
+                    categoryName = "Общий анализ крови";
+                }
+            }
+
+            if (nextPatientNum) {
+                state.activeCall = {
+                    number: nextPatientNum,
+                    category: categoryName
+                };
+            } else {
+                state.activeCall = null;
+                showSuccessNotification("Очередь пуста", "Пока нет ожидающих пациентов.");
+            }
+
+            publishState();
+        }
+
+        // --- ОТМЕНА ТАЛОНА ПАЦИЕНТОМ НА СВОЕМ ТЕЛЕФОНЕ ---
+        function cancelMyTicket() {
+            if (!mySavedTicket) return;
+
+            state.generalQueue = state.generalQueue.filter(num => num !== mySavedTicket);
+            state.specialQueue = state.specialQueue.filter(num => num !== mySavedTicket);
+
+            mySavedTicket = null;
+            localStorage.removeItem('my_ticket_' + cabinetId);
+
+            publishState();
+        }
+
+        // --- ПЕРЕНОС ТЕКУЩЕГО ВЫЗВАННОГО В КОНЕЦ ОЧЕРЕДИ ---
+        function delayCurrentPatient() {
+            if (currentRole !== 'nurse' || !state.activeCall) return;
+
+            const currentNum = state.activeCall.number;
+            
+            if (currentNum.startsWith('О')) {
+                state.generalQueue.push(currentNum);
+            } else {
+                state.specialQueue.push(currentNum);
+            }
+
+            state.activeCall = null;
+            publishState();
+            
+            showSuccessNotification("Перенос выполнен", "Пациент " + currentNum + " возвращен в конец очереди.");
+        }
+
+        // --- ПОВТОРНЫЙ ВЫЗОВ ---
+        function repeatCurrentCall() {
+            if (currentRole !== 'nurse' || !state.activeCall) return;
+            publishState();
+        }
+
+        // --- ПРИОСТАНОВКА / ОТКРЫТИЕ ЗАПИСИ МЕДСЕСТРОЙ ---
+        function toggleRegistration() {
+            if (currentRole !== 'nurse') return;
+            state.isBlocked = !state.isBlocked;
+            publishState();
+        }
+
+        // --- СБРОС И ОБНУЛЕНИЕ ВСЕЙ ОЧЕРЕДИ ---
+        function openClearConfirmModal() {
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+        function closeClearConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+        }
+        function resetWholeQueueConfirmed() {
+            state = {
+                activeCall: null,
+                generalQueue: [],
+                specialQueue: [],
+                generalCounter: 0,
+                specialCounter: 0,
+                isBlocked: false,
+                history: []
+            };
+            
+            closeClearConfirmModal();
+            publishState();
+            showSuccessNotification("Обнуление", "Все очереди успешно удалены.");
+        }
+
+        // --- ГОЛОСОВАЯ ОЗВУЧКА ВЫЗОВА (Синтез речи) ---
+        function speakCall(number, cabinet) {
+            if ('speechSynthesis' in window) {
+                let humanNumber = number;
+                if (number.startsWith('О-')) {
+                    humanNumber = "О " + number.substring(2);
+                } else if (number.startsWith('С-')) {
+                    humanNumber = "С " + number.substring(2);
+                }
+
+                const phrase = `Пациент номер ${humanNumber}, пройдите в ${cabinet}`;
+                
+                const utterance = new SpeechSynthesisUtterance(phrase);
+                utterance.lang = 'ru-RU';
+                utterance.rate = 0.9;
+                utterance.pitch = 1.0;
+
+                const voices = window.speechSynthesis.getVoices();
+                const ruVoice = voices.find(voice => voice.lang.includes('ru'));
+                if (ruVoice) {
+                    utterance.voice = ruVoice;
+                }
+
+                window.speechSynthesis.speak(utterance);
+            }
+        }
+
+        // --- АВТОМАТИЧЕСКАЯ ПОДСВЕТКА ВРЕМЕНИ ---
+        function startClock() {
+            setInterval(() => {
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
+                const totalMinutes = hours * 60 + minutes;
+
+                const isGeneral = totalMinutes >= 450 && totalMinutes < 510; // 07:30 - 08:30
+                const isSpecial = totalMinutes >= 510 && totalMinutes < 570; // 08:30 - 09:30
+
+                const hallTimeText = document.getElementById('hallTimePrompt');
+                if (isGeneral) {
+                    if (hallTimeText) hallTimeText.innerText = "⏰ Сейчас идет прием: ОБЩИЙ АНАЛИЗ";
+                } else if (isSpecial) {
+                    if (hallTimeText) hallTimeText.innerText = "⏰ Сейчас идет прием: ВИЧ, САХАР, БИОХИМИЯ";
+                } else {
+                    if (hallTimeText) hallTimeText.innerText = "⏰ Время планового приема анализов завершено";
+                }
+
+                const btnGen = document.getElementById('terminalBtnGeneral');
+                const btnSpec = document.getElementById('terminalBtnSpecial');
+                
+                if (btnGen && btnSpec) {
+                    if (isGeneral) {
+                        btnGen.className = btnGen.className.replace('border-teal-200', 'border-teal-500 bg-teal-50/20');
+                        btnSpec.className = btnSpec.className.replace('border-purple-500', 'border-purple-200').replace('bg-purple-50/20', '');
+                    } else if (isSpecial) {
+                        btnSpec.className = btnSpec.className.replace('border-purple-200', 'border-purple-500 bg-purple-50/20');
+                        btnGen.className = btnGen.className.replace('border-teal-500', 'border-teal-200').replace('bg-teal-50/20', '');
+                    }
+                }
+            }, 10000);
+        }
+
+        // --- ГЕНЕРАТОР QR-КОДА НА ПУЛЬТЕ ---
+        function generateCabinetQRCode(cabinetName) {
+            const currentUrlWithoutParams = window.location.origin + window.location.pathname;
+            const fullTargetUrl = `${currentUrlWithoutParams}?cabinet=${encodeURIComponent(cabinetName)}`;
+
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = '';
+
+            new QRCode(qrcodeDiv, {
+                text: fullTargetUrl,
+                width: 180,
+                height: 180,
+                colorDark : "#0f172a",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+        }
+
+        // --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА ---
+        function copyCabinetLink() {
+            const cabName = document.getElementById('cabinetNameText').innerText;
+            const link = `${window.location.origin}${window.location.pathname}?cabinet=${encodeURIComponent(cabName)}`;
+            
+            const tempInput = document.createElement('input');
+            tempInput.value = link;
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempInput);
+
+            showSuccessNotification("Ссылка скопирована!", "Отправьте её пациентам или вставьте в браузер.");
+        }
+
+        function showSuccessNotification(title, text) {
+            const notifyDiv = document.createElement('div');
+            notifyDiv.className = "fixed bottom-5 right-5 z-50 bg-slate-900 text-white p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-800 transition-all transform translate-y-10 opacity-0 duration-300";
+            notifyDiv.innerHTML = `
+                <div class="bg-blue-500 text-white p-2 rounded-lg text-xs"><i class="fa-solid fa-bell"></i></div>
+                <div>
+                    <h4 class="font-bold text-xs">${title}</h4>
+                    <p class="text-[10px] text-slate-400 mt-0.5">${text}</p>
+                </div>
+            `;
+            document.body.appendChild(notifyDiv);
+            
+            setTimeout(() => {
+                notifyDiv.classList.remove('translate-y-10', 'opacity-0');
+            }, 100);
+
+            setTimeout(() => {
+                notifyDiv.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => notifyDiv.remove(), 300);
+            }, 4000);
+        }
+
+        // Активация аудио контекста при клике
+        document.body.addEventListener('click', () => {
+            if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
+        }, { once: true });
+
+    </script>
+</body>
+</html>
